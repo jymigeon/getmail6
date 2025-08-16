@@ -15,7 +15,7 @@ import codecs
 from collections import namedtuple
 import tempfile
 import errno
-from multiprocessing import Process
+import multiprocessing as mp
 
 from argparse import Namespace
 import subprocess
@@ -448,7 +448,10 @@ class ForkingBase(object):
         self.child = child = Namespace()
         child.stdout = TemporaryFile23()
         child.stderr = TemporaryFile23()
-        child.process = Process(target=childfun, args=(child.stdout, child.stderr))
+        # XXX MacOS uses spawn instead of fork, which has difficulties to
+        # pickle/unpickle objects when multiprocessing. Set 'fork' mode by default
+        ctx = mp.get_context('fork')
+        child.process = ctx.Process(target=childfun, args=(child.stdout, child.stderr))
         child.process.start()
         child.childpid = child.process.pid
         self.log.trace('spawned child %d\n' % child.childpid)
